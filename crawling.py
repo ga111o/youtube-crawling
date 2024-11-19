@@ -6,30 +6,20 @@ import time
 from selenium.webdriver.common.keys import Keys
 import csv
 import pandas as pd
-from selenium.webdriver.firefox.service import Service
+from selenium.webdriver.chrome.service import Service
 from selenium import webdriver
 from selenium.webdriver.firefox.service import Service
 
 
 def get_total_youtube_comments(url, i, rep_num=2):
 
-    # options.add_argument("window-size=600,1080")
-    # options.add_experimental_option("excludeSwitches", ["enable-automation"])
-    # options.add_experimental_option('useAutomationExtension', False)
-    # service = Service('./geckodriver')
-    # driver = webdriver.Firefox(service=service, options=options)
-    # driver.get(url)
+    options = webdriver.ChromeOptions()
+    options.add_argument("window-size=600,1080")
+    options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    options.add_experimental_option('useAutomationExtension', False)
 
-    options = webdriver.FirefoxOptions()
-    options.add_argument("--width=600")
-    options.add_argument("--height=1080")
-    # options.add_argument("--disable-dev-shm-usage")
-    # options.add_argument(
-    #     "user-agent={Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.121 Safari/537.36}")
+    driver = webdriver.Chrome(options=options)
 
-    service = Service('./geckodriver')
-    driver = webdriver.Firefox(service=service, options=options)
-    driver.get("url")
     time.sleep(5)
 
     driver.find_element(By.TAG_NAME, 'body').send_keys(Keys.PAGE_DOWN)
