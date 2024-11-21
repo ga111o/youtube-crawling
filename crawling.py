@@ -4,15 +4,13 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import time
 from selenium.webdriver.common.keys import Keys
-import csv
 import pandas as pd
 from selenium.webdriver.chrome.service import Service
-from selenium import webdriver
-from selenium.webdriver.firefox.service import Service
+import unidecode
+from slugify import slugify
 
 
-def get_total_youtube_comments(url, i, rep_num=2):
-
+def get_total_youtube_comments(url, i):
     options = webdriver.ChromeOptions()
     options.add_argument("window-size=600,1080")
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
@@ -20,21 +18,32 @@ def get_total_youtube_comments(url, i, rep_num=2):
 
     driver = webdriver.Chrome(options=options)
 
+    driver.get(url)
+
     time.sleep(5)
 
     driver.find_element(By.TAG_NAME, 'body').send_keys(Keys.PAGE_DOWN)
 
-    last_comment = None
-    for i in range(rep_num):
+    last_height = driver.execute_script(
+        "return document.documentElement.scrollHeight")
+
+    while True:
         driver.execute_script(
             "window.scrollTo(0, document.documentElement.scrollHeight);")
         time.sleep(1.3)
 
-        last_comment = driver.find_element(
-            By.XPATH, "(//*[@id='content-text'])[last()]")
-        last_comment.location_once_scrolled_into_view
+        new_height = driver.execute_script(
+            "return document.documentElement.scrollHeight")
+        if new_height == last_height:
+            break
+        last_height = new_height
 
     time.sleep(3)
+
+    title_element = driver.find_element(
+        By.XPATH, "/html/body/ytd-app/div[1]/ytd-page-manager/ytd-watch-flexy/div[5]/div[1]/div/div[2]/ytd-watch-metadata/div/div[1]/h1/yt-formatted-string")
+    title = title_element.text
+    print("title:", title)
 
     comments = driver.find_elements(By.XPATH, "//*[@id='content-text']")
     authors = driver.find_elements(By.XPATH, "//*[@id='author-text']")
@@ -42,12 +51,7 @@ def get_total_youtube_comments(url, i, rep_num=2):
     written_times = driver.find_elements(
         By.XPATH, "//*[@id='published-time-text']")
 
-    print("==========================================")
-    print(written_times)
-    print("==========================================")
-
     data = []
-    print(0)
     for author, comment, vote, written_time in zip(authors, comments, votes, written_times):
         data.append({
             'URL': url,
@@ -56,11 +60,16 @@ def get_total_youtube_comments(url, i, rep_num=2):
             'Votes': vote.text,
             'WrittenTime': written_time.text
         })
-    print(1)
+    import re
+
     df = pd.DataFrame(data)
-    print(2)
-    df.to_csv(f'./youtube_comments_{i}.csv')
-    print(3)
+
+    clean_title = unidecode.unidecode(title)
+
+    clean_title = slugify(clean_title, separator="_")
+
+    df.to_csv(f'./{clean_title}.csv', index=False)
+
     driver.quit()
 
     print("\n")
@@ -71,12 +80,13 @@ def get_total_youtube_comments(url, i, rep_num=2):
     return 1
 
 
-df = pd.read_csv('./links.csv')
+df = pd.read_csv('./links1.csv')
 print(df)
 
-
-for i, url in enumerate(df['link']):
+for i, url in enumerate(df['URL']):
     try:
+        if "shorts" in url:
+            url = url.replace("shorts/", "watch?v=")
         print("===", i, url)
         get_total_youtube_comments(url, i)
     except Exception as e:
